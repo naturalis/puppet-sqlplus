@@ -1,41 +1,69 @@
 # == Class: sqlplus
 #
-# Full description of class sqlplus here.
-#
-# === Parameters
-#
-# Document parameters here.
-#
-# [*sample_parameter*]
-#   Explanation of what this parameter affects and what it defaults to.
-#   e.g. "Specify one or more upstream ntp servers as an array."
-#
-# === Variables
-#
-# Here you should define a list of variables that this module would require.
-#
-# [*sample_variable*]
-#   Explanation of how this variable affects the funtion of this class and if
-#   it has a default. e.g. "The parameter enc_ntp_servers must be set by the
-#   External Node Classifier as a comma separated list of hostnames." (Note,
-#   global variables should be avoided in favor of class parameters as
-#   of Puppet 2.6.)
-#
-# === Examples
-#
-#  class { 'sqlplus':
-#    servers => [ 'pool.ntp.org', 'ntp.local.company.com' ],
-#  }
-#
-# === Authors
-#
-# Author Name <author@domain.com>
-#
-# === Copyright
-#
-# Copyright 2014 Your name here, unless otherwise noted.
-#
-class sqlplus {
+class sqlplus (
+  $version,
+  $instantclient_package_name,
+  $sqlplus_package_name,
+  ){
+  
+  # Copy instantclient .rpm file
+    file { "/tmp/${instantclient_package_name}":
+      ensure => present,
+      source => "puppet:///modules/sqlplus/${instantclient_package_name}",
+    }
+      
+    # Copy sqlplus .rpm file
+    file { "/tmp/${sqlplus_package_name}":
+      ensure => present,
+      source => "puppet:///modules/sqlplus/${sqlplus_package_name}",
+    }
+  
+  case $::osfamily {
+    debian:{
+    
+      package { ['alien','libaio1','rlwrap']:
+        ensure => installed, 
+      }
+    
+      exec { "install instantclient":
+        command => "/usr/bin/alien -i /tmp/${instantclient_package_name}",
+        cwd     => "/tmp",
+        require => [Package["alien"], 
+                    File["/tmp/${instantclient_package_name}"]],
+        creates => "/usr/lib/oracle/${version}/client64/bin/libipc1.so",
+      }
+      
+      exec { "install sqlplus":
+        command => "/usr/bin/alien -i /tmp/${sqlplus_package_name}",
+        cwd     => "/tmp",
+        require => [Package["alien"], 
+                    File["/tmp/${sqlplus_package_name}"]],
+        creates => "/usr/lib/oracle/${version}/client64/bin/sqlplus",
+      }
+    }
+    
+    redhat: {
+      notify { "${::osfamily} not yet implemented": }
+    }
+  }
 
+  # Linking over an in-path launcher
+  exec { "symlink-sqlplus":
+    command => "/bin/ln -s /usr/lib/oracle/${version}/client64/bin/sqlplus /usr/local/bin/sqlplus",
+    creates => "/usr/local/bin/sqlplus",
+  }
+  
+  # Set LD_LIBRARY path system wide
+  file { '/etc/ld.so.conf.d/oracle.conf':
+    ensure  => file,
+    content => "/usr/lib/oracle/${version}/client64/lib",
+    notify  => Exec[ldconfig_refresh],
+  }
+  
+  # Run ldconfig to apply LD_LIBRARY path
+  exec { "ldconfig_refresh":
+    command     => '/sbin/ldconfig',
+    refreshonly => true,
+  }
 
 }
