@@ -30,7 +30,7 @@ class sqlplus (
         cwd     => "/tmp",
         require => [Package["alien"], 
                     File["/tmp/${instantclient_package_name}"]],
-        creates => "/usr/lib/oracle/${version}/client64/bin/libipc1.so",
+        creates => "/usr/lib/oracle/${version}/client64/bin/adrci",
       }
       
       exec { "install sqlplus":
