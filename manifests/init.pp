@@ -1,9 +1,9 @@
 # == Class: sqlplus
 #
 class sqlplus (
-  $version,
-  $instantclient_package_name,
-  $sqlplus_package_name,
+  $version                    = '12.1',
+  $instantclient_package_name = 'oracle-instantclient12.1-basiclite-12.1.0.2.0-1.x86_64.rpm',
+  $sqlplus_package_name       = 'oracle-instantclient12.1-sqlplus-12.1.0.2.0-1.x86_64.rpm'
   ){
   
   # Copy instantclient .rpm file
